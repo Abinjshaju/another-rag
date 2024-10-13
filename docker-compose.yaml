@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  rag_mvc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - WEB_CONCURRENCY=10
+      - DEBUG=0
+    volumes:
+      - ./app:/app
+    ports:
+      - "3030:3030"
+    networks:
+      - default
+    depends_on:
+      - weaviate
+    env_file:
+      - .env
+
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --scheme
+      - http
+    image: semitechnologies/weaviate:latest
+    restart: on-failure:0
+    volumes:
+      - ./local_weaviate_data:/var/lib/weaviate
+    environment:
+      QUERY_DEFAULTS_LIMIT: 20
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      ENABLE_MODULES: text2vec-openai,generative-openai
+      DEFAULT_VECTORIZER_MODULE: text2vec-openai
+      CLUSTER_HOSTNAME: "node1"
+    networks:
+      - default
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    env_file:
+      - .env
+
+  mongodb:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: pass
+    ports:
+      - "27017:27017"
+    command: ["mongod"]
+
+networks:
+  default:
+    name: docker_default_network
